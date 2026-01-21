@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wildlight</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #111;
+    color: white;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 3em;
+    margin-bottom: 40px;
+  }
+  #morseCircle {
+    width: 150px;
+    height: 150px;
+    margin: 20px auto;
+    border-radius: 50%;
+    background-color: red;
+    display: none; /* Kreis erst sichtbar beim Senden */
+  }
+  #morseText {
+    margin-top: 10px;
+    font-family: monospace;
+    font-size: 1.5em;
+  }
+  input, button {
+    padding: 10px;
+    font-size: 1em;
+    margin: 5px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Wildlight</h1>
+
+<div id="morseCircle"></div>
+<div id="morseText"></div>
+
+<input type="text" id="userText" placeholder="Hier Nachricht eingeben">
+<button onclick="startMorse()">Senden</button>
+
+<script>
+// Morsecode-Tabelle
+const morseMap = {
+  "A": "·-", "B": "-···", "C": "-·-·", "D": "-··", "E": "·",
+  "F": "··-·", "G": "--·", "H": "····", "I": "··", "J": "·---",
+  "K": "-·-", "L": "·-··", "M": "--", "N": "-·", "O": "---",
+  "P": "·--·", "Q": "--·-", "R": "·-·", "S": "···", "T": "-",
+  "U": "··-", "V": "···-", "W": "·--", "X": "-··-", "Y": "-·--",
+  "Z": "--··",
+  "0": "-----","1": "·----","2": "··---","3": "···--","4": "····-",
+  "5": "·····","6": "-····","7": "--···","8": "---··","9": "----·",
+  " ": "/"
+};
+
+function textToMorse(text){
+  return text.toUpperCase().split('').map(c => morseMap[c] || '').join(' ');
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Morse abspielen
+async function startMorse(){
+  const circle = document.getElementById('morseCircle');
+  const display = document.getElementById('morseText');
+  let text = document.getElementById('userText').value;
+  if(!text) return;
+
+  circle.style.display = "block"; // Kreis sichtbar
+  display.textContent = textToMorse(text);
+
+  const morseCode = textToMorse(text).split('');
+
+  const dotTime = 200; // Dauer Punkt
+  const dashTime = dotTime * 3;
+  const pauseTime = dotTime;
+
+  // Audio
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  for(let symbol of morseCode){
+    if(symbol === '·'){
+      circle.style.opacity = 1;
+      playBeep(audioCtx, dotTime);
+      await sleep(dotTime);
+      circle.style.opacity = 0.2;
+      await sleep(pauseTime);
+    } else if(symbol === '-'){
+      circle.style.opacity = 1;
+      playBeep(audioCtx, dashTime);
+      await sleep(dashTime);
+      circle.style.opacity = 0.2;
+      await sleep(pauseTime);
+    } else { // Leerzeichen
+      circle.style.opacity = 0.2;
+      await sleep(dotTime * 3);
+    }
+  }
+  circle.style.opacity = 0.2;
+}
+
+// Piepton
+function playBeep(audioCtx, duration){
+  const oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscillator.type = "square"; // klingt wie Kassen-Bip
+  oscillator.frequency.setValueAtTime(700, audioCtx.currentTime); // angenehme Frequenz
+  oscillator.start();
+  oscillator.stop(audioCtx.currentTime + duration/1000);
+}
+</script>
+
+</body>
+</html>
